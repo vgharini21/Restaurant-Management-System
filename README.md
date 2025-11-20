@@ -7,5 +7,5 @@
 
   Run `npm i` to install the dependencies.
 
-  Run `npm run dev` to start the development server.
+  Run `npm run dev -- --port 5173` to start the development server.
   
