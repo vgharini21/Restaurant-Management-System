@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Header } from './components/Header';
-import { RestaurantListView } from './components/RestaurantListView';
-import { MenuView } from './components/MenuView';
-import { CartView } from './components/CartView';
-import { ProfileView } from './components/ProfileView';
-import { OrderHistoryView } from './components/OrderHistoryView';
+import { useState } from "react";
+import { useAuth } from "react-oidc-context";
+import { Header } from "./components/Header";
+import { RestaurantListView } from "./components/RestaurantListView";
+import { MenuView } from "./components/MenuView";
+import { CartView } from "./components/CartView";
+import { ProfileView } from "./components/ProfileView";
+import { OrderHistoryView } from "./components/OrderHistoryView";
 
 export type MenuItem = {
   id: string;
@@ -37,7 +38,7 @@ export type Order = {
   items: CartItem[];
   total: number;
   date: string;
-  status: 'pending' | 'preparing' | 'completed';
+  status: "pending" | "preparing" | "completed";
   restaurantName: string;
 };
 
@@ -49,54 +50,96 @@ export type UserProfile = {
 };
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'restaurants' | 'menu' | 'cart' | 'profile' | 'orders'>('restaurants');
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const auth = useAuth();
+
+  const [currentView, setCurrentView] = useState<
+    "restaurants" | "menu" | "cart" | "profile" | "orders"
+  >("restaurants");
+  const [selectedRestaurant, setSelectedRestaurant] =
+    useState<Restaurant | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main St, City, State 12345'
+    name: "John Doe",
+    email: "john@example.com",
+    phone: "+1 (555) 123-4567",
+    address: "123 Main St, City, State 12345",
   });
+
+  // Basic auth state handling
+  if (auth.isLoading) {
+    return <div className="p-4">Loading authentication...</div>;
+  }
+
+  if (auth.error) {
+    return (
+      <div className="p-4 text-red-600">
+        Authentication error: {auth.error.message}
+      </div>
+    );
+  }
+
+  const isSignedIn = auth.isAuthenticated;
+
+  const handleSignIn = () => {
+    auth.signinRedirect(); // redirects to Cognito Hosted UI
+  };
+
+  const handleSignOut = async () => {
+    // Clear local auth state stored by oidc-client-ts
+    await auth.removeUser();
+
+    // Redirect to Cognito logout endpoint
+    const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
+    const logoutUri = "http://localhost:5173"; // MUST match Sign-out URLs in Cognito
+    const cognitoDomain =
+      "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
+
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
+      logoutUri
+    )}`;
+  };
 
   const handleViewRestaurantMenu = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
-    setCurrentView('menu');
+    setCurrentView("menu");
   };
 
   const handleBackToRestaurants = () => {
     setSelectedRestaurant(null);
-    setCurrentView('restaurants');
+    setCurrentView("restaurants");
   };
 
   const addToCart = (item: MenuItem) => {
     if (!selectedRestaurant) return;
 
-    setCart(prevCart => {
-      const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((cartItem) => cartItem.id === item.id);
       if (existingItem) {
-        return prevCart.map(cartItem =>
+        return prevCart.map((cartItem) =>
           cartItem.id === item.id
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
       }
-      return [...prevCart, { 
-        ...item, 
-        quantity: 1,
-        restaurantId: selectedRestaurant.id,
-        restaurantName: selectedRestaurant.name
-      }];
+      return [
+        ...prevCart,
+        {
+          ...item,
+          quantity: 1,
+          restaurantId: selectedRestaurant.id,
+          restaurantName: selectedRestaurant.name,
+        },
+      ];
     });
   };
 
   const updateCartItemQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) {
-      setCart(prevCart => prevCart.filter(item => item.id !== itemId));
+      setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
     } else {
-      setCart(prevCart =>
-        prevCart.map(item =>
+      setCart((prevCart) =>
+        prevCart.map((item) =>
           item.id === itemId ? { ...item, quantity } : item
         )
       );
@@ -104,7 +147,7 @@ export default function App() {
   };
 
   const removeFromCart = (itemId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== itemId));
+    setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
   };
 
   const placeOrder = () => {
@@ -115,13 +158,13 @@ export default function App() {
       items: [...cart],
       total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
       date: new Date().toISOString(),
-      status: 'pending',
-      restaurantName: cart[0].restaurantName
+      status: "pending",
+      restaurantName: cart[0].restaurantName,
     };
 
-    setOrders(prevOrders => [newOrder, ...prevOrders]);
+    setOrders((prevOrders) => [newOrder, ...prevOrders]);
     setCart([]);
-    setCurrentView('orders');
+    setCurrentView("orders");
   };
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -131,30 +174,30 @@ export default function App() {
       <Header
         currentView={currentView}
         onViewChange={(view) => {
-          if (view === 'restaurants') {
+          if (view === "restaurants") {
             handleBackToRestaurants();
           } else {
             setCurrentView(view);
           }
         }}
         cartItemCount={cartItemCount}
-        showBackButton={currentView === 'menu'}
+        showBackButton={currentView === "menu"}
         onBackClick={handleBackToRestaurants}
+        isSignedIn={isSignedIn}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
       />
-      
+
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {currentView === 'restaurants' && (
+        {currentView === "restaurants" && (
           <RestaurantListView onViewMenu={handleViewRestaurantMenu} />
         )}
 
-        {currentView === 'menu' && selectedRestaurant && (
-          <MenuView 
-            restaurant={selectedRestaurant}
-            onAddToCart={addToCart}
-          />
+        {currentView === "menu" && selectedRestaurant && (
+          <MenuView restaurant={selectedRestaurant} onAddToCart={addToCart} />
         )}
-        
-        {currentView === 'cart' && (
+
+        {currentView === "cart" && (
           <CartView
             cart={cart}
             onUpdateQuantity={updateCartItemQuantity}
@@ -162,16 +205,48 @@ export default function App() {
             onPlaceOrder={placeOrder}
           />
         )}
-        
-        {currentView === 'profile' && (
-          <ProfileView
-            profile={userProfile}
-            onUpdateProfile={setUserProfile}
-          />
+
+        {currentView === "profile" && (
+          <>
+            {!isSignedIn ? (
+              <div className="text-center">
+                <p className="mb-4">
+                  Please sign in with Cognito to view your profile.
+                </p>
+                <button
+                  onClick={handleSignIn}
+                  className="px-4 py-2 rounded bg-blue-600 text-white"
+                >
+                  Sign in
+                </button>
+              </div>
+            ) : (
+              <ProfileView
+                profile={userProfile}
+                onUpdateProfile={setUserProfile}
+              />
+            )}
+          </>
         )}
-        
-        {currentView === 'orders' && (
-          <OrderHistoryView orders={orders} />
+
+        {currentView === "orders" && (
+          <>
+            {!isSignedIn ? (
+              <div className="text-center">
+                <p className="mb-4">
+                  Please sign in with Cognito to view your orders.
+                </p>
+                <button
+                  onClick={handleSignIn}
+                  className="px-4 py-2 rounded bg-blue-600 text-white"
+                >
+                  Sign in
+                </button>
+              </div>
+            ) : (
+              <OrderHistoryView orders={orders} />
+            )}
+          </>
         )}
       </main>
     </div>
