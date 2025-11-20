@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "react-oidc-context";
 import { Header } from "./components/Header";
 import { RestaurantListView } from "./components/RestaurantListView";
@@ -65,6 +65,25 @@ export default function App() {
     phone: "+1 (555) 123-4567",
     address: "123 Main St, City, State 12345",
   });
+
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user) {
+      const profile = auth.user.profile;
+
+      const nameFromCognito =
+        profile.name ||
+        [profile.given_name, profile.family_name].filter(Boolean).join(" ") ||
+        userProfile.name;
+
+      setUserProfile((prev) => ({
+        ...prev,
+        name: nameFromCognito,
+        email: profile.email || prev.email,
+        phone: profile.phone_number || prev.phone,
+        // address stays whatever user typed in UI
+      }));
+    }
+  }, [auth.isAuthenticated, auth.user]);
 
   // Basic auth state handling
   if (auth.isLoading) {
