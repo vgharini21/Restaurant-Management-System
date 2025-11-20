@@ -1,0 +1,59 @@
+#Restaurant
+
+{
+  "id": "uber_12345",
+  "name": "Foodie Pizza",
+  "description": "Authentic NY-style pizza.",
+  "cuisine": "Pizza",
+  "rating": 4.6,
+  "deliveryTime": "30-40 min",
+  "image": "https://example.com/pizza.jpg",
+  "menu": [
+    {
+      "id": "item_1",
+      "name": "Margherita Pizza",
+      "description": "Fresh mozzarella, tomato, basil",
+      "price": 14.99,
+      "category": "Pizza",
+      "image": "https://example.com/margherita.jpg"
+    }
+  ]
+}
+
+
+#Order
+
+{
+  "id": "order-1710908200000",
+  "restaurantName": "Foodie Pizza",
+  "items": [
+    {
+      "id": "item_1",
+      "name": "Margherita Pizza",
+      "description": "Fresh mozzarella, tomato, basil",
+      "price": 14.99,
+      "category": "Pizza",
+      "image": "",
+      "quantity": 2,
+      "restaurantId": "uber_12345",
+      "restaurantName": "Foodie Pizza"
+    }
+  ],
+  "total": 29.98,
+  "date": "2025-11-20T18:03:42.123Z",
+  "status": "pending",
+  "customerEmail": "user@example.com"
+}
+
+
+#user profile
+
+
+{
+  "name": "john",
+  "email": "user@example.com",
+  "phone": "+1-555-555-1234",
+  "address": "123 Main St, New York, NY"
+}
+
+
