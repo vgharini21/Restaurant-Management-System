@@ -169,9 +169,17 @@ export default function App() {
     setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
   };
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (cart.length === 0) return;
 
+    // 1️⃣ Ensure user is signed in (Cognito)
+    const customerEmail = auth.user?.profile?.email;
+    if (!customerEmail) {
+      alert("Please sign in to place an order.");
+      return;
+    }
+
+    // 2️⃣ Build real order object
     const newOrder: Order = {
       id: `order-${Date.now()}`,
       items: [...cart],
@@ -181,7 +189,29 @@ export default function App() {
       restaurantName: cart[0].restaurantName,
     };
 
-    setOrders((prevOrders) => [newOrder, ...prevOrders]);
+    // 3️⃣ Call API Gateway → SNS Lambda
+    try {
+      await fetch(
+        "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/orders",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // OPTIONAL — add auth token later if needed
+            // Authorization: `Bearer ${auth.user.access_token}`,
+          },
+          body: JSON.stringify({
+            order: newOrder, // actual menu items + total
+            customerEmail: customerEmail, // logged in Cognito user
+          }),
+        }
+      );
+    } catch (error) {
+      console.error("Failed to send order to Lambda:", error);
+    }
+
+    // 4️⃣ Still update your UI
+    setOrders((prev) => [newOrder, ...prev]);
     setCart([]);
     setCurrentView("orders");
   };
