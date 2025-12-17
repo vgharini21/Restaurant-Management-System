@@ -1,15 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Restaurant } from "../App";
 import { RestaurantCard } from "./RestaurantCard";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Search } from "lucide-react";
+import { restaurantImages } from "../utils/restaurantImages";
 
 const API_BASE = "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2";
 
 type RestaurantListViewProps = {
   onViewMenu: (restaurant: Restaurant) => void;
 };
+
+// Fallback restaurant image (generic restaurant)
+const DEFAULT_RESTAURANT_IMAGE =
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800";
+
+// Category-based menu images (so they aren’t all identical)
+const MENU_CATEGORY_IMAGES: Record<string, string> = {
+  Pizza:
+    "https://images.unsplash.com/photo-1548365328-9c2d5b8f7c41?auto=format&fit=crop&w=800",
+  "Extra Large Pizza":
+    "https://images.unsplash.com/photo-1548365328-9c2d5b8f7c41?auto=format&fit=crop&w=800",
+  Wings:
+    "https://images.unsplash.com/photo-1604909053259-2f23a5ef8c49?auto=format&fit=crop&w=800",
+  "Jumbo Wings":
+    "https://images.unsplash.com/photo-1604909053259-2f23a5ef8c49?auto=format&fit=crop&w=800",
+  "Spicy Jumbo Wings":
+    "https://images.unsplash.com/photo-1604909053259-2f23a5ef8c49?auto=format&fit=crop&w=800",
+  Smoothies:
+    "https://images.unsplash.com/photo-1505252585461-04db1eb84625?auto=format&fit=crop&w=800",
+  Coffee:
+    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800",
+  Burgers:
+    "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800",
+  Snacks:
+    "https://images.unsplash.com/photo-1599490659213-e2b9527bd087?auto=format&fit=crop&w=800",
+};
+
+// Default menu item image (generic food)
+const DEFAULT_MENU_IMAGE =
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800";
 
 export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -23,6 +54,7 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
     async function loadRestaurants() {
       try {
         setLoading(true);
+        setError(null);
 
         // Load first 6 restaurants from your friend's API
         const ids = [1, 2, 3, 4, 5, 6];
@@ -33,38 +65,45 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
             if (!res.ok) throw new Error(`Restaurant ${id} not found`);
 
             const items = await res.json(); // array of menu items
-
             if (!Array.isArray(items) || items.length === 0) return null;
 
             const first = items[0];
 
+            const restaurantName: string = first.restaurant_name;
+            const restaurantImage =
+              restaurantImages[restaurantName] ?? DEFAULT_RESTAURANT_IMAGE;
+
             const restaurant: Restaurant = {
               id: first.restaurant_id,
-              name: first.restaurant_name,
+              name: restaurantName,
               cuisine: first.cuisine,
               description: `${first.cuisine} • Popular choices available`,
               rating: 4.7,
               deliveryTime: "20–40 min",
-              image:
-                "https://images.unsplash.com/photo-1555992336-fb0d29498b13?auto=format&fit=crop&w=800",
-              menu: items.map((item: any) => ({
-                id: item.menu_item_id,
-                name: item.name,
-                description: item.description ?? "Delicious menu item",
-                price: item.price,
-                category: item.category,
-                image:
-                  "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=800",
-              })),
-            };
+              image: restaurantImage,
+              menu: items.map((item: any) => {
+                const category: string = item.category ?? "Food";
+                const menuImage =
+                  MENU_CATEGORY_IMAGES[category] ?? DEFAULT_MENU_IMAGE;
 
+                return {
+                  id: item.menu_item_id,
+                  name: item.name,
+                  description: item.description ?? "Delicious menu item",
+                  price: item.price,
+                  category,
+                  image: menuImage,
+                };
+              }),
+            };
+            console.log(first.restaurant_name)
             return restaurant;
           })
         );
 
         setRestaurants(result.filter(Boolean) as Restaurant[]);
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message ?? "Failed to load restaurants");
       } finally {
         setLoading(false);
       }
@@ -73,10 +112,10 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
     loadRestaurants();
   }, []);
 
-  const cuisines = [
-    "All",
-    ...Array.from(new Set(restaurants.map((r) => r.cuisine))),
-  ];
+  const cuisines = useMemo(
+    () => ["All", ...Array.from(new Set(restaurants.map((r) => r.cuisine)))],
+    [restaurants]
+  );
 
   // Filtering logic
   const filteredRestaurants = restaurants.filter((restaurant) => {
