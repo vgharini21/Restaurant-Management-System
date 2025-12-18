@@ -49,6 +49,25 @@ export type UserProfile = {
   address: string;
 };
 
+const profileKeyFor = (email: string) => `rms_profile_${email}`;
+
+function loadStoredProfile(email: string) {
+  try {
+    const raw = localStorage.getItem(profileKeyFor(email));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredProfile(email: string, profile: any) {
+  try {
+    localStorage.setItem(profileKeyFor(email), JSON.stringify(profile));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export default function App() {
   const auth = useAuth();
 
@@ -67,23 +86,47 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (auth.isAuthenticated && auth.user) {
-      const profile = auth.user.profile;
+    if (!auth.isAuthenticated || !auth.user) return;
 
-      const nameFromCognito =
-        profile.name ||
-        [profile.given_name, profile.family_name].filter(Boolean).join(" ") ||
-        userProfile.name;
+    const email = (auth.user.profile.email as string) || "";
+    if (!email) return;
 
-      setUserProfile((prev) => ({
-        ...prev,
-        name: nameFromCognito,
-        email: profile.email || prev.email,
-        phone: profile.phone_number || prev.phone,
-        // address stays whatever user typed in UI
-      }));
-    }
+    const stored = loadStoredProfile(email);
+
+    // Always start from Cognito for name/email/phone if available
+    const profile = auth.user.profile;
+    const nameFromCognito =
+      profile.name ||
+      [profile.given_name, profile.family_name].filter(Boolean).join(" ") ||
+      "";
+
+    setUserProfile({
+      name: stored?.name ?? nameFromCognito ?? "John Doe",
+      email: email,
+      phone: stored?.phone ?? (profile.phone_number as string) ?? "",
+      address: stored?.address ?? "",
+    });
   }, [auth.isAuthenticated, auth.user]);
+
+
+  // useEffect(() => {
+  //   if (auth.isAuthenticated && auth.user) {
+  //     const profile = auth.user.profile;
+
+  //     const nameFromCognito =
+  //       profile.name ||
+  //       [profile.given_name, profile.family_name].filter(Boolean).join(" ") ||
+  //       userProfile.name;
+
+  //     setUserProfile((prev) => ({
+  //       ...prev,
+  //       name: nameFromCognito,
+  //       email: profile.email || prev.email,
+  //       phone: profile.phone_number || prev.phone,
+  //       // address stays whatever user typed in UI
+  //     }));
+  //   }
+  // }, [auth.isAuthenticated, auth.user]);
 
   // Basic auth state handling
   if (auth.isLoading) {
@@ -217,6 +260,19 @@ export default function App() {
   };
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const saveProfile = (profile: UserProfile) => {
+    setUserProfile(profile);
+
+    const email = profile.email;
+    if (!email) return;
+
+    saveStoredProfile(email, {
+      name: profile.name,
+      phone: profile.phone,
+      address: profile.address,
+      // email is already the key; no need to store it, but harmless if you do
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -272,7 +328,7 @@ export default function App() {
             ) : (
               <ProfileView
                 profile={userProfile}
-                onUpdateProfile={setUserProfile}
+                onUpdateProfile={saveProfile}
               />
             )}
           </>
