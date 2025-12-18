@@ -251,7 +251,7 @@ export default function App() {
 
     try {
       await fetch(
-        "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/orders",
+        "https://80t28u337e.execute-api.us-east-1.amazonaws.com/prod/orders",
         {
           method: "POST",
           headers: {

@@ -136,7 +136,7 @@ type CartViewProps = {
 
 // 🔥 TODO: replace with your API Gateway endpoint that triggers the payment Lambda
 const PAYMENTS_API_URL =
-  "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/payments";
+  "https://80t28u337e.execute-api.us-east-1.amazonaws.com/prod/payments";
 
 export function CartView({
   cart,
