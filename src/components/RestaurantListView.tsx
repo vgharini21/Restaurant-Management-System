@@ -12,11 +12,9 @@ type RestaurantListViewProps = {
   onViewMenu: (restaurant: Restaurant) => void;
 };
 
-// Fallback restaurant image (generic restaurant)
 const DEFAULT_RESTAURANT_IMAGE =
   "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800";
 
-// Category-based menu images (so they aren’t all identical)
 const MENU_CATEGORY_IMAGES: Record<string, string> = {
   Pizza:
     "https://images.unsplash.com/photo-1548365328-9c2d5b8f7c41?auto=format&fit=crop&w=800",
@@ -38,7 +36,6 @@ const MENU_CATEGORY_IMAGES: Record<string, string> = {
     "https://images.unsplash.com/photo-1599490659213-e2b9527bd087?auto=format&fit=crop&w=800",
 };
 
-// Default menu item image (generic food)
 const DEFAULT_MENU_IMAGE =
   "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800";
 
@@ -56,7 +53,6 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
         setLoading(true);
         setError(null);
 
-        // Load first 6 restaurants from your friend's API
         const ids = [1, 2, 3, 4, 5, 6];
 
         const result = await Promise.all(
@@ -64,7 +60,7 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
             const res = await fetch(`${API_BASE}/menu/${id}`);
             if (!res.ok) throw new Error(`Restaurant ${id} not found`);
 
-            const items = await res.json(); // array of menu items
+            const items = await res.json();
             if (!Array.isArray(items) || items.length === 0) return null;
 
             const first = items[0];
@@ -74,7 +70,7 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
               restaurantImages[restaurantName] ?? DEFAULT_RESTAURANT_IMAGE;
 
             const restaurant: Restaurant = {
-              id: first.restaurant_id,
+              id: String(first.restaurant_id),
               name: restaurantName,
               cuisine: first.cuisine,
               description: `${first.cuisine} • Popular choices available`,
@@ -87,7 +83,7 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
                   MENU_CATEGORY_IMAGES[category] ?? DEFAULT_MENU_IMAGE;
 
                 return {
-                  id: item.menu_item_id,
+                  id: String(item.menu_item_id),
                   name: item.name,
                   description: item.description ?? "Delicious menu item",
                   price: item.price,
@@ -96,7 +92,7 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
                 };
               }),
             };
-            console.log(first.restaurant_name)
+
             return restaurant;
           })
         );
@@ -117,28 +113,55 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
     [restaurants]
   );
 
-  // Filtering logic
+  // === Recommended section (like Figma) ===
+  // Option A: pick specific IDs (like your Figma example)
+  const recommendedRestaurants = useMemo(() => {
+    const preferredIds = new Set(["2", "6", "1"]); // edit if you want
+    const picks = restaurants.filter((r) => preferredIds.has(String(r.id)));
+    // fallback: if those IDs aren't present, just show top 3
+    if (picks.length > 0) return picks.slice(0, 3);
+    return [...restaurants].slice(0, 3);
+  }, [restaurants]);
+
+  // === Filtering logic for main list ===
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       restaurant.name.toLowerCase().includes(q) ||
-      restaurant.cuisine.toLowerCase().includes(q);
+      restaurant.cuisine.toLowerCase().includes(q) ||
+      restaurant.description.toLowerCase().includes(q);
+
     const matchesCuisine =
       selectedCuisine === "All" || restaurant.cuisine === selectedCuisine;
+
     return matchesSearch && matchesCuisine;
   });
 
   if (loading) return <div className="py-12 text-center">Loading…</div>;
-  if (error)
-    return <div className="py-12 text-center text-red-500">{error}</div>;
+  if (error) return <div className="py-12 text-center text-red-500">{error}</div>;
 
   return (
     <div>
+      {/* Recommended for You Section */}
+      <div className="mb-12">
+        <h2 className="mb-6">Recommended for You</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendedRestaurants.map((restaurant) => (
+            <RestaurantCard
+              key={restaurant.id}
+              restaurant={restaurant}
+              onViewMenu={onViewMenu}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Main Restaurant List */}
       <div className="mb-8">
         <h2 className="mb-4">Restaurants Near You</h2>
 
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Search restaurants..."
             className="pl-10"
@@ -160,15 +183,21 @@ export function RestaurantListView({ onViewMenu }: RestaurantListViewProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredRestaurants.map((restaurant) => (
-          <RestaurantCard
-            key={restaurant.id}
-            restaurant={restaurant}
-            onViewMenu={onViewMenu}
-          />
-        ))}
-      </div>
+      {filteredRestaurants.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <p>No restaurants found matching your search.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRestaurants.map((restaurant) => (
+            <RestaurantCard
+              key={restaurant.id}
+              restaurant={restaurant}
+              onViewMenu={onViewMenu}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -41,6 +41,16 @@ const cognitoAuthConfig = {
   scope: "openid email",
 };
 
+// const cognitoAuthConfig = {
+//   authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abkju3TOn",
+//   client_id: "2mdsov6q0up9jhfml2k5o9tdgi",
+//   redirect_uri: import.meta.env.VITE_REDIRECT_URI,
+//   response_type: "code",
+//   scope: "openid email",
+// };
+
+
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider
