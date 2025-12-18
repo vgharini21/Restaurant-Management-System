@@ -49,7 +49,21 @@ export type UserProfile = {
   address: string;
 };
 
+export type Review = {
+  id: string;
+  restaurantId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  date: string;
+};
+
+// ----------------------
+// localStorage helpers
+// ----------------------
 const profileKeyFor = (email: string) => `rms_profile_${email}`;
+const reviewKey = "rms_reviews_v1";
 
 function loadStoredProfile(email: string) {
   try {
@@ -68,22 +82,49 @@ function saveStoredProfile(email: string, profile: any) {
   }
 }
 
+function loadStoredReviews(): Review[] {
+  try {
+    const raw = localStorage.getItem(reviewKey);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredReviews(reviews: Review[]) {
+  try {
+    localStorage.setItem(reviewKey, JSON.stringify(reviews));
+  } catch {
+    // ignore
+  }
+}
+
 export default function App() {
   const auth = useAuth();
 
   const [currentView, setCurrentView] = useState<
     "restaurants" | "menu" | "cart" | "profile" | "orders"
   >("restaurants");
+
   const [selectedRestaurant, setSelectedRestaurant] =
     useState<Restaurant | null>(null);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: "John Doe",
     email: "john@example.com",
     phone: "+1 (555) 123-4567",
     address: "123 Main St, City, State 12345",
   });
+
+  // Reviews (persisted in browser)
+  const [reviews, setReviews] = useState<Review[]>(() => loadStoredReviews());
+
+  useEffect(() => {
+    saveStoredReviews(reviews);
+  }, [reviews]);
 
   useEffect(() => {
     if (!auth.isAuthenticated || !auth.user) return;
@@ -96,7 +137,7 @@ export default function App() {
     // Always start from Cognito for name/email/phone if available
     const profile = auth.user.profile;
     const nameFromCognito =
-      profile.name ||
+      (profile.name as string) ||
       [profile.given_name, profile.family_name].filter(Boolean).join(" ") ||
       "";
 
@@ -107,26 +148,6 @@ export default function App() {
       address: stored?.address ?? "",
     });
   }, [auth.isAuthenticated, auth.user]);
-
-
-  // useEffect(() => {
-  //   if (auth.isAuthenticated && auth.user) {
-  //     const profile = auth.user.profile;
-
-  //     const nameFromCognito =
-  //       profile.name ||
-  //       [profile.given_name, profile.family_name].filter(Boolean).join(" ") ||
-  //       userProfile.name;
-
-  //     setUserProfile((prev) => ({
-  //       ...prev,
-  //       name: nameFromCognito,
-  //       email: profile.email || prev.email,
-  //       phone: profile.phone_number || prev.phone,
-  //       // address stays whatever user typed in UI
-  //     }));
-  //   }
-  // }, [auth.isAuthenticated, auth.user]);
 
   // Basic auth state handling
   if (auth.isLoading) {
@@ -144,16 +165,14 @@ export default function App() {
   const isSignedIn = auth.isAuthenticated;
 
   const handleSignIn = () => {
-    auth.signinRedirect(); // redirects to Cognito Hosted UI
+    auth.signinRedirect();
   };
 
   const handleSignOut = async () => {
-    // Clear local auth state stored by oidc-client-ts
     await auth.removeUser();
 
-    // Redirect to Cognito logout endpoint
     const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
-    const logoutUri = "http://localhost:5173"; // MUST match Sign-out URLs in Cognito
+    const logoutUri = "http://localhost:5173";
     const cognitoDomain =
       "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
 
@@ -215,14 +234,12 @@ export default function App() {
   const placeOrder = async () => {
     if (cart.length === 0) return;
 
-    // 1️⃣ Ensure user is signed in (Cognito)
     const customerEmail = auth.user?.profile?.email;
     if (!customerEmail) {
       alert("Please sign in to place an order.");
       return;
     }
 
-    // 2️⃣ Build real order object
     const newOrder: Order = {
       id: `order-${Date.now()}`,
       items: [...cart],
@@ -232,7 +249,6 @@ export default function App() {
       restaurantName: cart[0].restaurantName,
     };
 
-    // 3️⃣ Call API Gateway → SNS Lambda
     try {
       await fetch(
         "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/orders",
@@ -240,12 +256,10 @@ export default function App() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // OPTIONAL — add auth token later if needed
-            // Authorization: `Bearer ${auth.user.access_token}`,
           },
           body: JSON.stringify({
-            order: newOrder, // actual menu items + total
-            customerEmail: customerEmail, // logged in Cognito user
+            order: newOrder,
+            customerEmail: customerEmail,
           }),
         }
       );
@@ -253,13 +267,11 @@ export default function App() {
       console.error("Failed to send order to Lambda:", error);
     }
 
-    // 4️⃣ Still update your UI
     setOrders((prev) => [newOrder, ...prev]);
     setCart([]);
     setCurrentView("orders");
   };
 
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const saveProfile = (profile: UserProfile) => {
     setUserProfile(profile);
 
@@ -270,9 +282,38 @@ export default function App() {
       name: profile.name,
       phone: profile.phone,
       address: profile.address,
-      // email is already the key; no need to store it, but harmless if you do
     });
   };
+
+  // NEW: add review
+  const addReview = (restaurantId: string, rating: number, comment: string) => {
+    if (!auth.isAuthenticated || !auth.user) {
+      alert("Please sign in to leave a review.");
+      return;
+    }
+
+    const userId =
+      (auth.user.profile.sub as string) ||
+      (auth.user.profile.email as string) ||
+      "anonymous";
+
+    const userName =
+      (auth.user.profile.name as string) || userProfile.name || "Anonymous";
+
+    const newReview: Review = {
+      id: `review-${Date.now()}`,
+      restaurantId,
+      userId,
+      userName,
+      rating,
+      comment,
+      date: new Date().toISOString(),
+    };
+
+    setReviews((prev) => [newReview, ...prev]);
+  };
+
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -299,7 +340,16 @@ export default function App() {
         )}
 
         {currentView === "menu" && selectedRestaurant && (
-          <MenuView restaurant={selectedRestaurant} onAddToCart={addToCart} />
+          <MenuView
+            restaurant={selectedRestaurant}
+            onAddToCart={addToCart}
+            reviews={reviews.filter(
+              (r) => r.restaurantId === selectedRestaurant.id
+            )}
+            onAddReview={addReview}
+            userName={userProfile.name}
+            isSignedIn={isSignedIn}
+          />
         )}
 
         {currentView === "cart" && (
@@ -326,10 +376,7 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <ProfileView
-                profile={userProfile}
-                onUpdateProfile={saveProfile}
-              />
+              <ProfileView profile={userProfile} onUpdateProfile={saveProfile} />
             )}
           </>
         )}
