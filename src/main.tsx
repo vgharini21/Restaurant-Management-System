@@ -36,7 +36,7 @@ const cognitoAuthConfig = {
   // issuer URL: region + userPoolId
   authority: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abkju3TOn",
   client_id: "2mdsov6q0up9jhfml2k5o9tdgi", // your app client id
-  redirect_uri: "http://localhost:5173",
+  redirect_uri: "https://d3t9ac16dxeckl.cloudfront.net",
   response_type: "code",
   scope: "openid email",
 };
