@@ -17,15 +17,15 @@ const DEFAULT_RESTAURANT_IMAGE =
 
 const MENU_CATEGORY_IMAGES: Record<string, string> = {
   Pizza:
-    "https://images.unsplash.com/photo-1548365328-9c2d5b8f7c41?auto=format&fit=crop&w=800",
+    "https://restaurant-menu-images-ai-generated.s3.us-east-1.amazonaws.com/menu/pizza.jpg",
   "Extra Large Pizza":
-    "https://images.unsplash.com/photo-1548365328-9c2d5b8f7c41?auto=format&fit=crop&w=800",
+    "https://restaurant-menu-images-ai-generated.s3.us-east-1.amazonaws.com/menu/pizza.jpg",
   Wings:
-    "https://images.unsplash.com/photo-1604909053259-2f23a5ef8c49?auto=format&fit=crop&w=800",
+    "https://restaurant-menu-images-ai-generated.s3.us-east-1.amazonaws.com/menu/wings.jpg",
   "Jumbo Wings":
-    "https://images.unsplash.com/photo-1604909053259-2f23a5ef8c49?auto=format&fit=crop&w=800",
+    "https://restaurant-menu-images-ai-generated.s3.us-east-1.amazonaws.com/menu/wings.jpg",
   "Spicy Jumbo Wings":
-    "https://images.unsplash.com/photo-1604909053259-2f23a5ef8c49?auto=format&fit=crop&w=800",
+    "https://restaurant-menu-images-ai-generated.s3.us-east-1.amazonaws.com/menu/wings.jpg",
   Smoothies:
     "https://images.unsplash.com/photo-1505252585461-04db1eb84625?auto=format&fit=crop&w=800",
   Coffee:
