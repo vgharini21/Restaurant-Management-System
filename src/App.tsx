@@ -279,7 +279,7 @@ export default function App() {
         }
       );
     } catch (error) {
-      console.error("Failed to send order to Lambda:", error);
+      console.error("Failed to send order to the Lambda:", error);
     }
 
     setOrders((prev) => [newOrder, ...prev]);
