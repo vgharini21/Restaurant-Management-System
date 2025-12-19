@@ -1,0 +1,242 @@
+# Restaurant Data Management System - Megha
+
+## 📋 Overview
+This component handles the **data ingestion, processing, and search functionality** for the Restaurant Management System. It includes:
+- Kaggle dataset cleaning and processing
+- DynamoDB data ingestion
+- OpenSearch indexing for fast search
+- Lambda function for global food item search
+- API Gateway endpoints for data retrieval
+
+---
+
+## 🏗️ Architecture
+
+```
+Kaggle Dataset (CSV)
+        ↓
+   [Cleaning Script]
+        ↓
+   DynamoDB Tables
+        ↓
+  [OpenSearch Indexing]
+        ↓
+   Lambda Function (Search)
+        ↓
+   API Gateway (Public URLs)
+```
+
+---
+
+## 📂 Project Structure
+
+```
+Dataset/
+├── scripts/
+│   ├── Kaggle_dataset.py                    # Cleans raw Kaggle dataset
+│   ├── Dynamodb_ingestion.py                # Uploads data to DynamoDB
+│   ├── OpenSearch_Index_From_DynamoDB.py    # Indexes DynamoDB → OpenSearch
+│   ├── OpenSearch_Count_Check.py            # Verifies OpenSearch data count
+│   ├── OpenSearch_Index_Delete.py           # Deletes OpenSearch index
+│   └── DynamoDB_truncate.py                 # Truncates DynamoDB table
+│
+├── lambda/
+│   └── globalFoodSearch.py                  # Lambda function for search API
+│
+├── requirements.txt                          # Python dependencies
+└── README.md                                 # This file
+```
+
+---
+
+## 🚀 API Endpoints
+
+### 1. Get Menu by Restaurant ID
+**Endpoint:**
+```
+GET https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/menu/{restaurantId}
+```
+
+**Example:**
+```bash
+curl https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/menu/1
+```
+
+**Response:**
+```json
+{
+  "restaurantId": "1",
+  "restaurantName": "Example Restaurant",
+  "menu": [
+    {
+      "itemId": "101",
+      "itemName": "Burger",
+      "price": 12.99,
+      "category": "Main Course"
+    }
+  ]
+}
+```
+
+---
+
+### 2. Search Food Items by Name
+**Endpoint:**
+```
+GET https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/search?query={item}
+```
+
+**Example:**
+```bash
+curl https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/search?query=burger
+```
+
+**Response:**
+```json
+{
+  "query": "burger",
+  "results": [
+    {
+      "itemId": "101",
+      "itemName": "Classic Burger",
+      "restaurantId": "1",
+      "restaurantName": "Example Restaurant",
+      "price": 12.99
+    }
+  ]
+}
+```
+
+---
+
+## ⚙️ Setup Instructions
+
+### Prerequisites
+- Python 3.9+
+- AWS CLI configured with appropriate credentials
+- Access to DynamoDB and OpenSearch
+- Kaggle dataset: `restaurant-menus.csv` and `restaurants.csv`
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Data Ingestion Pipeline
+
+#### Step 1: Clean Kaggle Dataset
+```bash
+python scripts/Kaggle_dataset.py
+```
+**Output:** `cleaned_restaurant_data.json`
+
+#### Step 2: Upload to DynamoDB
+```bash
+python scripts/Dynamodb_ingestion.py
+```
+**Creates:** DynamoDB tables with restaurant and menu data
+
+#### Step 3: Index to OpenSearch
+```bash
+python scripts/OpenSearch_Index_From_DynamoDB.py
+```
+**Creates:** OpenSearch index for fast searching
+
+#### Step 4: Verify Data
+```bash
+python scripts/OpenSearch_Count_Check.py
+```
+**Output:** Count of indexed documents
+
+---
+
+## 🔧 Lambda Deployment
+
+### Deploy Search Function
+
+1. **Install dependencies to a layer:**
+```bash
+mkdir -p lambda-layer/python
+pip install -r requirements.txt -t lambda-layer/python/
+cd lambda-layer
+zip -r lambda-layer.zip python/
+```
+
+2. **Create Lambda Layer in AWS:**
+- Upload `lambda-layer.zip` as a Lambda Layer
+- Compatible with Python 3.9+
+
+3. **Deploy Lambda Function:**
+- Upload `lambda/globalFoodSearch.py` to AWS Lambda
+- Attach the Lambda Layer created above
+- Configure environment variables (OpenSearch endpoint, etc.)
+- Set timeout to 30 seconds
+- Memory: 512 MB recommended
+
+4. **Connect to API Gateway:**
+- Create REST API in API Gateway
+- Add `/search` resource with GET method
+- Add `/{restaurantId}` resource with GET method
+- Deploy to stage (e.g., `v2`)
+
+---
+
+## 🧹 Utility Scripts
+
+### Delete OpenSearch Index
+```bash
+python scripts/OpenSearch_Index_Delete.py
+```
+
+### Truncate DynamoDB Table
+```bash
+python scripts/DynamoDB_truncate.py
+```
+
+---
+
+## 🔍 Testing
+
+### Test Menu Endpoint
+```bash
+# Replace {restaurantId} with actual ID
+curl https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/menu/1
+```
+
+### Test Search Endpoint
+```bash
+# Search for items
+curl "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/search?query=burger"
+curl "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/search?query=pizza"
+```
+
+---
+
+## 🛠️ Technologies Used
+
+- **Python 3.9+** - Core programming language
+- **AWS DynamoDB** - NoSQL database for restaurant/menu data
+- **AWS OpenSearch** - Search and analytics engine
+- **AWS Lambda** - Serverless function for search API
+- **AWS API Gateway** - REST API endpoints
+- **boto3** - AWS SDK for Python
+- **opensearch-py** - OpenSearch Python client
+
+---
+
+## 📝 Notes
+
+- **Dataset files are NOT included** in the repository (too large)
+- Download from Kaggle: [Restaurant Menus Dataset](https://www.kaggle.com/)
+- Place CSV files in the `Dataset/` folder before running scripts
+- Ensure AWS credentials are configured with appropriate permissions
+
+---
+
+## 👥 Integration with Other Components
+
+This component provides data APIs for:
+- **Person 1** (Auth): User authentication and authorization
+- **Person 3** (Orders): Order creation and payment processing
+- **Person 4** (Frontend): UI displays menu, search results, recommendations
+

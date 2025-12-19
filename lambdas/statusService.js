@@ -7,7 +7,8 @@ const docClient = DynamoDBDocumentClient.from(ddbClient);
 const snsClient = new SNSClient({});
 
 const TABLE_NAME = "RestaurantOrders";
-const SNS_TOPIC_ARN = "arn:aws:sns:us-east-2:YOUR_ACCOUNT_ID:OrderUpdates";
+
+const SNS_TOPIC_ARN = "arn:aws:sns:us-east-1:875219264820:OrderUpdates";
 
 export const handler = async (event) => {
   console.log("Status Update Request:", JSON.stringify(event));
@@ -23,7 +24,7 @@ export const handler = async (event) => {
       };
     }
 
-
+    // 1. Update DynamoDB
     const updateCommand = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { orderId: orderId },
@@ -35,6 +36,7 @@ export const handler = async (event) => {
 
     await docClient.send(updateCommand);
 
+    // 2. Send SNS Notification
     const message = `Update for Order #${orderId}: Your order is now ${status}!`;
     const publishCommand = new PublishCommand({
       TopicArn: SNS_TOPIC_ARN,

@@ -1,0 +1,32 @@
+# Create .gitignore in Dataset folder only
+cat > Dataset/.gitignore << 'EOF'
+# Data files
+*.csv
+*.json
+*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Mac
+.DS_Store
+
+# Lambda dependencies (already have them packaged)
+global_search_lambda/certifi/
+global_search_lambda/charset_normalizer/
+global_search_lambda/dateutil/
+global_search_lambda/events/
+global_search_lambda/google/
+global_search_lambda/grpc/
+global_search_lambda/idna/
+global_search_lambda/opensearch/
+global_search_lambda/opensearchpy/
+global_search_lambda/protobuf/
+global_search_lambda/requests/
+global_search_lambda/urllib3/
+global_search_lambda/*.dist-info/
+global_search_lambda/bin/
+global_search_lambda/__pycache__/
+EOF

@@ -172,7 +172,9 @@ export default function App() {
     await auth.removeUser();
 
     const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
+
     const logoutUri = "https://d3t9ac16dxeckl.cloudfront.net";
+
     const cognitoDomain =
       "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
 
