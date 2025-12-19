@@ -172,7 +172,9 @@ export default function App() {
     await auth.removeUser();
 
     const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
-    const logoutUri = "https://d3t9ac16dxeckl.cloudfront.net"; // MUST match Sign-out URLs in Cognito
+
+    const logoutUri = "https://d3t9ac16dxeckl.cloudfront.net";
+
     const cognitoDomain =
       "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
 
@@ -180,6 +182,21 @@ export default function App() {
       logoutUri
     )}`;
   };
+
+  // const handleSignOut = async () => {
+  //   await auth.removeUser();
+
+  //   const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
+  //   const cognitoDomain =
+  //     "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
+
+  //   const logoutUri = window.location.origin; // ✅ uses CloudFront in prod, localhost in dev
+
+  //   window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
+  //     logoutUri
+  //   )}`;
+  // };
+
 
   const handleViewRestaurantMenu = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
@@ -251,7 +268,7 @@ export default function App() {
 
     try {
       await fetch(
-        "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2/orders",
+        "https://80t28u337e.execute-api.us-east-1.amazonaws.com/prod/orders",
         {
           method: "POST",
           headers: {

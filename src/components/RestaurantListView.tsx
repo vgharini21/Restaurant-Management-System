@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Search } from "lucide-react";
 import { restaurantImages } from "../utils/restaurantImages";
 
-const API_BASE = "https://80t28u337e.execute-api.us-east-1.amazonaws.com/v2";
+const API_BASE = "https://80t28u337e.execute-api.us-east-1.amazonaws.com/prod";
 
 type RestaurantListViewProps = {
   onViewMenu: (restaurant: Restaurant) => void;
