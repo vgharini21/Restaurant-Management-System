@@ -38,7 +38,7 @@ export type Order = {
   items: CartItem[];
   total: number;
   date: string;
-  status: "pending" | "preparing" | "completed";
+  status: string;
   restaurantName: string;
 };
 
@@ -59,9 +59,6 @@ export type Review = {
   date: string;
 };
 
-// ----------------------
-// localStorage helpers
-// ----------------------
 const profileKeyFor = (email: string) => `rms_profile_${email}`;
 const reviewKey = "rms_reviews_v1";
 
@@ -78,7 +75,7 @@ function saveStoredProfile(email: string, profile: any) {
   try {
     localStorage.setItem(profileKeyFor(email), JSON.stringify(profile));
   } catch {
-    // ignore storage errors
+    
   }
 }
 
@@ -95,7 +92,7 @@ function saveStoredReviews(reviews: Review[]) {
   try {
     localStorage.setItem(reviewKey, JSON.stringify(reviews));
   } catch {
-    // ignore
+    
   }
 }
 
@@ -106,11 +103,9 @@ export default function App() {
     "restaurants" | "menu" | "cart" | "profile" | "orders"
   >("restaurants");
 
-  const [selectedRestaurant, setSelectedRestaurant] =
-    useState<Restaurant | null>(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: "John Doe",
@@ -119,7 +114,6 @@ export default function App() {
     address: "123 Main St, City, State 12345",
   });
 
-  // Reviews (persisted in browser)
   const [reviews, setReviews] = useState<Review[]>(() => loadStoredReviews());
 
   useEffect(() => {
@@ -133,8 +127,6 @@ export default function App() {
     if (!email) return;
 
     const stored = loadStoredProfile(email);
-
-    // Always start from Cognito for name/email/phone if available
     const profile = auth.user.profile;
     const nameFromCognito =
       (profile.name as string) ||
@@ -149,52 +141,20 @@ export default function App() {
     });
   }, [auth.isAuthenticated, auth.user]);
 
-  // Basic auth state handling
-  if (auth.isLoading) {
-    return <div className="p-4">Loading authentication...</div>;
-  }
-
-  if (auth.error) {
-    return (
-      <div className="p-4 text-red-600">
-        Authentication error: {auth.error.message}
-      </div>
-    );
-  }
+  if (auth.isLoading) return <div className="p-4">Loading authentication...</div>;
+  if (auth.error) return <div className="p-4 text-red-600">Error: {auth.error.message}</div>;
 
   const isSignedIn = auth.isAuthenticated;
 
-  const handleSignIn = () => {
-    auth.signinRedirect();
-  };
-
+  const handleSignIn = () => auth.signinRedirect();
+  
   const handleSignOut = async () => {
     await auth.removeUser();
-
     const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
     const logoutUri = "https://d3t9ac16dxeckl.cloudfront.net";
-    const cognitoDomain =
-      "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
-
-    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
-      logoutUri
-    )}`;
+    const cognitoDomain = "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
-
-  // const handleSignOut = async () => {
-  //   await auth.removeUser();
-
-  //   const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
-  //   const cognitoDomain =
-  //     "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
-
-  //   const logoutUri = window.location.origin; // ✅ uses CloudFront in prod, localhost in dev
-
-  //   window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
-  //     logoutUri
-  //   )}`;
-  // };
-
 
   const handleViewRestaurantMenu = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
@@ -235,9 +195,7 @@ export default function App() {
       setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
     } else {
       setCart((prevCart) =>
-        prevCart.map((item) =>
-          item.id === itemId ? { ...item, quantity } : item
-        )
+        prevCart.map((item) => (item.id === itemId ? { ...item, quantity } : item))
       );
     }
   };
@@ -246,74 +204,29 @@ export default function App() {
     setCart((prevCart) => prevCart.filter((item) => item.id !== itemId));
   };
 
-  const placeOrder = async () => {
-    if (cart.length === 0) return;
-
-    const customerEmail = auth.user?.profile?.email;
-    if (!customerEmail) {
-      alert("Please sign in to place an order.");
-      return;
-    }
-
-    const newOrder: Order = {
-      id: `order-${Date.now()}`,
-      items: [...cart],
-      total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-      date: new Date().toISOString(),
-      status: "pending",
-      restaurantName: cart[0].restaurantName,
-    };
-
-    try {
-      await fetch(
-        "https://80t28u337e.execute-api.us-east-1.amazonaws.com/prod/orders",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            order: newOrder,
-            customerEmail: customerEmail,
-          }),
-        }
-      );
-    } catch (error) {
-      console.error("Failed to send order to the Lambda:", error);
-    }
-
-    setOrders((prev) => [newOrder, ...prev]);
-    setCart([]);
-    setCurrentView("orders");
+  const handlePlaceOrder = (paymentId?: string) => {
+    setCart([]); 
+    setCurrentView("orders"); 
   };
 
   const saveProfile = (profile: UserProfile) => {
     setUserProfile(profile);
-
-    const email = profile.email;
-    if (!email) return;
-
-    saveStoredProfile(email, {
-      name: profile.name,
-      phone: profile.phone,
-      address: profile.address,
-    });
+    if (profile.email) {
+      saveStoredProfile(profile.email, {
+        name: profile.name,
+        phone: profile.phone,
+        address: profile.address,
+      });
+    }
   };
 
-  // NEW: add review
   const addReview = (restaurantId: string, rating: number, comment: string) => {
-    if (!auth.isAuthenticated || !auth.user) {
+    if (!isSignedIn) {
       alert("Please sign in to leave a review.");
       return;
     }
-
-    const userId =
-      (auth.user.profile.sub as string) ||
-      (auth.user.profile.email as string) ||
-      "anonymous";
-
-    const userName =
-      (auth.user.profile.name as string) || userProfile.name || "Anonymous";
+    const userId = auth.user?.profile.sub || "anonymous";
+    const userName = auth.user?.profile.name || userProfile.name || "Anonymous";
 
     const newReview: Review = {
       id: `review-${Date.now()}`,
@@ -324,7 +237,6 @@ export default function App() {
       comment,
       date: new Date().toISOString(),
     };
-
     setReviews((prev) => [newReview, ...prev]);
   };
 
@@ -335,11 +247,8 @@ export default function App() {
       <Header
         currentView={currentView}
         onViewChange={(view) => {
-          if (view === "restaurants") {
-            handleBackToRestaurants();
-          } else {
-            setCurrentView(view);
-          }
+          if (view === "restaurants") handleBackToRestaurants();
+          else setCurrentView(view);
         }}
         cartItemCount={cartItemCount}
         showBackButton={currentView === "menu"}
@@ -358,9 +267,7 @@ export default function App() {
           <MenuView
             restaurant={selectedRestaurant}
             onAddToCart={addToCart}
-            reviews={reviews.filter(
-              (r) => r.restaurantId === selectedRestaurant.id
-            )}
+            reviews={reviews.filter((r) => r.restaurantId === selectedRestaurant.id)}
             onAddReview={addReview}
             userName={userProfile.name}
             isSignedIn={isSignedIn}
@@ -372,48 +279,34 @@ export default function App() {
             cart={cart}
             onUpdateQuantity={updateCartItemQuantity}
             onRemoveItem={removeFromCart}
-            onPlaceOrder={placeOrder}
+            onPlaceOrder={handlePlaceOrder} 
           />
         )}
 
         {currentView === "profile" && (
-          <>
-            {!isSignedIn ? (
-              <div className="text-center">
-                <p className="mb-4">
-                  Please sign in with Cognito to view your profile.
-                </p>
-                <button
-                  onClick={handleSignIn}
-                  className="px-4 py-2 rounded bg-blue-600 text-white"
-                >
-                  Sign in
-                </button>
-              </div>
-            ) : (
-              <ProfileView profile={userProfile} onUpdateProfile={saveProfile} />
-            )}
-          </>
+          isSignedIn ? (
+            <ProfileView profile={userProfile} onUpdateProfile={saveProfile} />
+          ) : (
+            <div className="text-center py-10">
+              <p className="mb-4 text-lg">Please sign in to view your profile.</p>
+              <button onClick={handleSignIn} className="px-6 py-2 bg-blue-600 text-white rounded-lg">
+                Sign In
+              </button>
+            </div>
+          )
         )}
 
         {currentView === "orders" && (
-          <>
-            {!isSignedIn ? (
-              <div className="text-center">
-                <p className="mb-4">
-                  Please sign in with Cognito to view your orders.
-                </p>
-                <button
-                  onClick={handleSignIn}
-                  className="px-4 py-2 rounded bg-blue-600 text-white"
-                >
-                  Sign in
-                </button>
-              </div>
-            ) : (
-              <OrderHistoryView orders={orders} />
-            )}
-          </>
+          isSignedIn ? (
+            <OrderHistoryView /> 
+          ) : (
+            <div className="text-center py-10">
+              <p className="mb-4 text-lg">Please sign in to view your orders.</p>
+              <button onClick={handleSignIn} className="px-6 py-2 bg-blue-600 text-white rounded-lg">
+                Sign In
+              </button>
+            </div>
+          )
         )}
       </main>
     </div>
