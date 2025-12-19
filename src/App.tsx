@@ -172,7 +172,7 @@ export default function App() {
     await auth.removeUser();
 
     const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
-    const logoutUri = "http://localhost:5173";
+    const logoutUri = "https://d3t9ac16dxeckl.cloudfront.net";
     const cognitoDomain =
       "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
 
@@ -180,6 +180,21 @@ export default function App() {
       logoutUri
     )}`;
   };
+
+  // const handleSignOut = async () => {
+  //   await auth.removeUser();
+
+  //   const clientId = "2mdsov6q0up9jhfml2k5o9tdgi";
+  //   const cognitoDomain =
+  //     "https://us-east-1abkju3ton.auth.us-east-1.amazoncognito.com";
+
+  //   const logoutUri = window.location.origin; // ✅ uses CloudFront in prod, localhost in dev
+
+  //   window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(
+  //     logoutUri
+  //   )}`;
+  // };
+
 
   const handleViewRestaurantMenu = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
